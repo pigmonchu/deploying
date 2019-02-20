@@ -4,7 +4,42 @@ import psycopg2
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    dbParams = app.config['DATABASE']
+    try:
+        conn = psycopg2.connect(host=dbParams['host'], port=dbParams['port'], dbname=dbParams['dbname'], user=dbParams['dbuser'], password=dbParams['password'])
+        cur = conn.cursor()
+
+        query = "SELECT * FROM movimientos;"
+
+        cur.execute(query);
+        
+        fila = cur.fetchone()
+        movimientos = []
+        while fila != None:
+            movimiento = {}
+
+            for ix in range(0, len(fila)):
+                columnName = cur.description[ix][0]
+                if columnName == 'fecha_hora':
+                    dato = str(fila[ix])
+                    movimiento['fecha'] = dato[:10]
+                    movimiento['hora'] = dato[11:16]
+                else:
+                    movimiento[columnName] = fila[ix]
+            movimientos.append(movimiento)
+
+            fila = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        print(e.pgerror)
+        cur.close()
+        conn.close()
+
+    return render_template('index.html', registros=movimientos)
+
 
 @app.route('/nuevoregistro', methods=['GET', 'POST'])
 def nuevoregistro():
